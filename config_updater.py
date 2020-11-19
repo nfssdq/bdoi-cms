@@ -4,8 +4,14 @@ import json
 import sys
 import subprocess
 
+
+PROJECT_NAME = 'bdoi-cms'
+SQL_INSTANCE_NAME = 'bdoi'
+CONFIG_FILE_NAME = 'cms.conf'
+
 compute = discovery.build('compute', 'v1')
-bucket = storage.Client().bucket('bdoi')
+sqladmin = discovery.build('sqladmin', 'v1beta4')
+bucket = storage.Client(project=PROJECT_NAME).bucket('contestdata')
 zones = ['asia-southeast1-a', 'asia-southeast1-b',
          'asia-southeast1-c', 'asia-south1-a']
 
@@ -13,19 +19,13 @@ zones = ['asia-southeast1-a', 'asia-southeast1-b',
 def list_servers(servertype=None):
     servers = []
     for zone in zones:
-        instances = compute.instances().list(project='bdoi2020', zone=zone).execute()
+        instances = compute.instances().list(
+            project=PROJECT_NAME, zone=zone).execute()
         if 'items' not in instances:
             continue
         for item in instances['items']:
             has_servertype = False
-            for kv in item['metadata']['items']:
-                if kv['key'] == 'servertype':
-                    has_servertype = True
-                    if servertype is not None and kv['value'] == servertype:
-                        servers.append([
-                            item['networkInterfaces'][0]['networkIP'],
-                            item['name'], zone])
-            if has_servertype is False and servertype is None:
+            if item['labels']['type'] == servertype:
                 servers.append([
                     item['networkInterfaces'][0]['networkIP'],
                     item['name'], zone])
@@ -33,13 +33,13 @@ def list_servers(servertype=None):
 
 
 def load_conf():
-    blob = bucket.get_blob('cms.conf')
+    blob = bucket.get_blob(CONFIG_FILE_NAME)
     data = blob.download_as_string()
     return json.loads(data)
 
 
 def save_conf(conf):
-    bucket.blob('cms.conf').upload_from_string(json.dumps(conf))
+    bucket.blob(CONFIG_FILE_NAME).upload_from_string(json.dumps(conf))
 
 
 def process_workers(conf, admin, worker, ranking):
@@ -77,14 +77,15 @@ def process_workers(conf, admin, worker, ranking):
 
     for server in ranking:
         conf['rankings'].append(
-            "http://bdoi2020:jdmnpn@{}:8890/".format(server[0]))
+            "http://ranking:jdmnpn@{}:8890/".format(server[0]))
 
 
 def make_commands(cid):
     return [
-        'sudo gsutil cp gs://bdoi/cms.conf /usr/local/etc/cms.conf',
+        'sudo gsutil cp gs://contestdata/cms.conf /usr/local/etc/cms.conf',
         'sudo screen -XS cmsResourceService quit',
-        'sudo screen -S cmsResourceService -d -m cmsResourceService -a {}'.format(cid)]
+        'sudo screen -S cmsResourceService -d -m cmsResourceService -a {}'
+        .format(cid)]
 
 
 def reload(instance, zone, cid):
@@ -94,11 +95,19 @@ def reload(instance, zone, cid):
                 instance, zone, cmd)], stdout=subprocess.PIPE, shell=True))
 
 
+def update_db(conf):
+    instance = sqladmin.instances().get(
+        project=PROJECT_NAME, instance=SQL_INSTANCE_NAME).execute()
+    ip = instance['ipAddresses'][0]['ipAddress']
+    conf['database'] = 'postgresql+psycopg2://cmsuser:sqAM5BY8U8VX@{}:5432/cmsdb'.format(ip)
+
+
 def controller(cid):
-    admin = list_servers()
-    worker = list_servers('contestworker')
-    ranking = list_servers('rankingworker')
+    admin = list_servers('adminserver')
+    worker = list_servers('contestserver')
+    ranking = list_servers('rankingserver')
     conf = load_conf()
+    update_db(conf)
     process_workers(conf, admin[0], worker, ranking)
     print(json.dumps(conf))
     save_conf(conf)
