@@ -11,5 +11,5 @@ usermod -a -G cmsuser nfssdq
 pip3 install -r ./requirements.txt
 python3 ./setup.py install
 
-gsutil cp gs://bdoi/cms.conf /usr/local/etc/cms.conf
-gsutil cp gs://bdoi/cms.ranking.conf /usr/local/etc/cms.ranking.conf
+gsutil cp gs://contestdata/cms.conf /usr/local/etc/cms.conf
+gsutil cp gs://contestdata/cms.ranking.conf /usr/local/etc/cms.ranking.conf
