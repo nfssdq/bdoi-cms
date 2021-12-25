@@ -1,13 +1,17 @@
 #! /bin/bash
 apt-get update
-yes | apt-get install build-essential python3.6 cppreference-doc-en-html cgroup-lite libcap-dev zip python3.6-dev libpq-dev libcups2-dev libyaml-dev libffi-dev python3-pip
+yes | apt-get install build-essential python3.8 cppreference-doc-en-html cgroup-lite libcap-dev zip python3.8-dev libpq-dev libcups2-dev libyaml-dev libffi-dev python3-pip
 
-cd /home/nfssdq
-git clone --branch v1.5.dev0-bdoi2021 --recursive https://github.com/RezwanArefin01/cms.git 
+pip3 install --upgrade pip google-cloud-storage google-cloud-secret-manager google-api-python-client
+
+cd ~
+gsutil cp gs://contestdata/config_updater.py .
+
+git clone --branch v1.5.dev0-bdoi --recursive https://github.com/RezwanArefin01/cms.git 
 cd cms
 echo "##################################################################################"
 python3 ./prerequisites.py -y --as-root install
-usermod -a -G cmsuser nfssdq
+usermod -a -G cmsuser root
 pip3 install -r ./requirements.txt
 python3 ./setup.py install
 
