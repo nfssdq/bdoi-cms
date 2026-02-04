@@ -1,8 +1,8 @@
 #! /bin/bash
 apt-get update
-yes | apt-get install build-essential python3.8 cppreference-doc-en-html cgroup-lite libcap-dev zip python3.8-dev libpq-dev libcups2-dev libyaml-dev libffi-dev python3-pip
+yes | apt-get install build-essential python3.10 cppreference-doc-en-html cgroup-lite libcap-dev zip python3.10-dev libpq-dev libcups2-dev libyaml-dev libffi-dev python3-pip
 
-pip3 install --upgrade pip google-cloud-storage google-cloud-secret-manager google-api-python-client
+pip3 install --upgrade pip google-cloud-storage google-cloud-secret-manager google-api-python-client pyopenssl
 
 cd ~
 gsutil cp gs://contestdata/config_updater.py .
